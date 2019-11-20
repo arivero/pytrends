@@ -1,0 +1,2 @@
+Installing collected packages: async-timeout, attrs, typing-extensions, multidict, idna, yarl, chardet, idna-ssl, aiohttp, aiofiles, python-magic, typing, pycparser, cffi, pycares, aiodns, cchardet, peony-twitter
+Successfully installed aiodns-2.0.0 aiofiles-0.4.0 aiohttp-3.6.2 async-timeout-3.0.1 attrs-19.3.0 cchardet-2.1.5 cffi-1.13.2 chardet-3.0.4 idna-2.8 idna-ssl-1.1.0 multidict-4.6.0 peony-twitter-1.1.5 pycares-3.0.0 pycparser-2.19 python-magic-0.4.15 typing-3.7.4.1 typing-extensions-3.7.4.1 yarl-1.3.0
