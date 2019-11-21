@@ -41,7 +41,7 @@ async def tell(trend,score):
 async def sample():
   async with aiohttp.TCPConnector(force_close=True,limit_per_host=1,use_dns_cache=False) as c: #podriamos dar otro resolver
     async with aiohttp.ClientSession(connector=c) as session:
-      for lang in ['','&hl=en']:
+      for lang in ['','&hl=en','&hl=es']:
         async with session.get('https://www.google.com/complete/search?client=qsb-android-asbl&q=&gl=ES'+lang) as response:
           json = await response.json()
           yield json
@@ -65,7 +65,7 @@ async def main():
             if dbTrend.zc != zc:
               print(dbTrend.busqueda," ya estaba en la BD, con zc=", dbTrend.zc)
       if len(a) > 0:
-          asyncio.gather(*a)
+          await asyncio.gather(*a)
 
 
 loop.run_until_complete(main())
