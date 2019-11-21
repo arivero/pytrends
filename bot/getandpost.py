@@ -5,6 +5,7 @@ import aiohttp
 import sqlite3
 from peewee import *
 import datetime
+from random import sample
 from tokens import *
 # NOTE: the package name is peony and not peony-twitter
 from peony import PeonyClient
@@ -12,15 +13,15 @@ from peony import PeonyClient
 db = SqliteDatabase('tendencias.db')
 loop = asyncio.get_event_loop()
 
-langcodes="af, ach, ak, am, ar, az, ban, be, bem, bg, bh, bn, br, bs,ca, ceb, chr, ckb,\
-co, crs, cs, cy, da, de, ee, el, en, eo, es, es-419, et, eu, fa,fi,\
-fo, fr, fy, ga, gaa, gd, gl, gn, gu, ha, haw, hi, hr, ht, hu, hy,ia,\
-id, ig, is, it, iw, ja, jw, ka, kg, kk, km, kn, ko,kri,ku,ky,la,\
-lg, ln, lo, loz, lt, lua, lv,mfe,mg,mi,mk,ml,mn,mo,mr,ms,mt,my,\
-ne, nl, nn, no, nso, ny, nyn,oc, om, or, pa, pcm, pl, ps,pt-BR,\
-pt-PT, qu, rm, rn, ro, ru, rw,sd, sh, si, sk, sl, sn, sm, so, sq, sr,\
-sr-Latn, sr-ME, st, su, sv, sw,ta, te, tg, th, ti, tk, tl, tlh, tn, to, tr, tt,\
-tum, tw, ug, uk, ur, uz, vi, wo,xh, xx-bork, xx-elmer, xx-hacker,\
+langcodes="af,ach,ak,am,ar,az,ban,be,bem,bg,bh,bn,br,bs,ca,ceb,chr,ckb,\
+co,crs,cs,cy,da,de,ee,el,en,eo,es,es-419,et,eu,fa,fi,\
+fo,fr,fy,ga,gaa,gd,gl,gn,gu,ha,haw,hi,hr,ht,hu,hy,ia,\
+id,ig,is,it,iw,ja,jw,ka,kg,kk,km,kn,ko,kri,ku,ky,la,\
+lg,ln,lo,loz,lt,lua,lv,mfe,mg,mi,mk,ml,mn,mo,mr,ms,mt,my,\
+ne,nl,nn,no,nso,ny,nyn,oc,om,or,pa,pcm,pl,ps,pt-BR,\
+pt-PT,qu,rm,rn,ro,ru,rw,sd,sh,si,sk,sl,sn,sm,so,sq,sr,\
+sr-Latn,sr-ME,st,su,sv,sw,ta,te,tg,th,ti,tk,tl,tlh,tn,to,tr,tt,\
+tum,tw,ug,uk,ur,uz,vi,wo,xh,xx-bork,xx-elmer,xx-hacker,\
 xx-klingon,xx-pirate,yi,yo,zh-CN,zh-TW,zu".split(",")
 
 countrycodes="AD,AE,AF,AG,AI,AL,AM,AO,AQ,AR,AS,AT,AU,AW,AZ,BA,BB,BD,BE,BF,BG,\
@@ -37,15 +38,24 @@ WF,WS,XK,YE,YT,ZA,ZM,ZW".split(",")
 class Trend(Model):
   class Meta:
     database = db
-  busqueda=TextField()
+  busqueda=TextField(unique=True,primary_key=True)
   zc=IntegerField()
   found=DateTimeField(default=datetime.datetime.now)
+
+class History(Model):
+  class Meta:
+    database = db
+  found=DateTimeField(default=datetime.datetime.now)
+  busqueda=TextField()
   hl=CharField(null=True)
   gl=CharField(null=True)
+  zc=IntegerField()
   raw=TextField()
 
 
+
 db.connect()
+#History.create_table()
 #Trend.drop_table()
 #db.create_tables([Trend])
 
@@ -60,33 +70,39 @@ async def tell(trend,score):
   return client.api.statuses.update.post(status=mensaje)
 
 #asynchronous generator
-async def sample():
+async def sampleLanguages():
   async with aiohttp.TCPConnector(force_close=True,limit_per_host=1,use_dns_cache=False) as c: #podriamos dar otro resolver
     async with aiohttp.ClientSession(connector=c) as session:
-      for lang in ['','en','es','cat','eu','ca','gl']:
+      for lang in ['','en','es','cat','eu','ca','gl']+sample(langcodes,2):
         l= '&hl='+lang if len(lang)>0 else ''
         async with session.get('https://www.google.com/complete/search?client=qsb-android-asbl&q=&gl=ES'+l) as response:
           json = await response.json()
           yield json,l
-          print(json)
+          print(l,json)
 
 #native coroutine (main one)
 async def main():
-    async for j,hl in sample():
+    Trend.delete().where(Trend.found < datetime.datetime.now()-datetime.timedelta(days=1) 
+          ).execute()
+    async for j,hl in sampleLanguages():
       a=[]
       for e in j[1]:
           name=e[0][3:-4]
           zc=e[3]['zc']
           raw=str(e)
-          dbTrend, created =Trend.get_or_create(busqueda=name, defaults= {'hl':hl,'gl':'ES','zc':zc, 'raw':raw})
+          dbTrend, created =Trend.get_or_create(busqueda=name, defaults= {'zc':zc})
           if created:
+            #busqueda=name, defaults= {'hl':hl,'gl':'ES','zc':zc, 'raw':raw})
             #esto es lo raro de los async... aqui el primero solo nos da un request pending
             res = await tell(name,zc)
             #... y tenemos que ejecutar una espera del segundo para estar seguro de que se ejecuta
             a.append(res)
+            History.create(busqueda=name,hl=hl,gl='ES',zc=zc, raw=raw)
           else:
             if dbTrend.zc != zc:
-              print(dbTrend.busqueda," ya estaba en la BD, con zc=", dbTrend.zc)
+              dbTrend.zc=zc
+              dbTrend.save()
+              History.create(busqueda=name,hl=hl,gl='ES',zc=zc, raw=raw)
       if len(a) > 0:
           await asyncio.gather(*a)
 
