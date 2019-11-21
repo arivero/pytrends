@@ -37,13 +37,21 @@ async def tell(trend,score):
   print(mensaje)
   return client.api.statuses.update.post(status=mensaje)
 
-async def main():
+#asynchronous generator
+async def sample():
   async with aiohttp.TCPConnector(force_close=True,limit_per_host=1,use_dns_cache=False) as c: #podriamos dar otro resolver
     async with aiohttp.ClientSession(connector=c) as session:
-      async with session.get('https://www.google.com/complete/search?client=qsb-android-asbl&q=&gl=ES') as response:
-        json = await response.json()
-        print(json)
-        for e in json[1]:
+      for lang in ['','&hl=en']:
+        async with session.get('https://www.google.com/complete/search?client=qsb-android-asbl&q=&gl=ES'+lang) as response:
+          json = await response.json()
+          yield json
+          print(json)
+
+#native coroutine (main one)
+async def main():
+    async for j in sample():
+      a=[]
+      for e in j[1]:
           name=e[0][3:-4]
           zc=e[3]['zc']
           raw=str(e)
@@ -52,9 +60,12 @@ async def main():
             #esto es lo raro de los async... aqui el primero solo nos da un request pending
             res = await tell(name,zc)
             #... y tenemos que ejecutar una espera del segundo para estar seguro de que se ejecuta
-            res2 = await res
+            a.append(res)
           else:
             if dbTrend.zc != zc:
-              print("ya estaba en la BD, con zc=", dbTrend.zc)
+              print(dbTrend.busqueda," ya estaba en la BD, con zc=", dbTrend.zc)
+      if len(a) > 0:
+          asyncio.gather(*a)
+
 
 loop.run_until_complete(main())
