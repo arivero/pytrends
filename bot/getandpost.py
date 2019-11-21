@@ -3,6 +3,7 @@ import asyncio
 import aiodns
 import aiohttp
 import sqlite3
+import urllib.parse
 from peewee import *
 import datetime
 from random import sample
@@ -67,6 +68,8 @@ client = PeonyClient(consumer_key=consumer_key,
 async def tell(trend,score):
   mensaje="Se esta buscando '"+trend+"', con una score zc="+str(score)
   print(mensaje)
+  mensaje+="\n https://trends.google.com/trends/explore?q="+ urllib.parse.quote_plus(trend)+ "&date=now%201-d&geo=ES#RELATED_QUERIES_0"
+
   return client.api.statuses.update.post(status=mensaje)
 
 #asynchronous generator
@@ -92,7 +95,6 @@ async def main():
           raw=str(e)
           dbTrend, created =Trend.get_or_create(busqueda=name, defaults= {'zc':zc})
           if created:
-            #busqueda=name, defaults= {'hl':hl,'gl':'ES','zc':zc, 'raw':raw})
             #esto es lo raro de los async... aqui el primero solo nos da un request pending
             res = await tell(name,zc)
             #... y tenemos que ejecutar una espera del segundo para estar seguro de que se ejecuta
