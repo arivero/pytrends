@@ -80,7 +80,7 @@ async def sampleLanguages():
         l= '&hl='+lang if len(lang)>0 else ''
         async with session.get('https://www.google.com/complete/search?client=qsb-android-asbl&q=&gl=ES'+l) as response:
           json = await response.json()
-          yield json,l
+          yield json,lang
           print(l,json)
 
 #native coroutine (main one)
