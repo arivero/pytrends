@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+message Trend {
+  required string name = 1;
+  required int32 score = 2;
+  required bool ok =7;
+}
+
+message Conjunto {
+  repeated Trend tendencia = 1;
+}
+
+message Vista {
+  repeated Conjunto c = 1;
+}
+
