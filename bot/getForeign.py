@@ -56,7 +56,6 @@ async def fetch(cnl):
   async with aiohttp.TCPConnector(force_close=True,limit_per_host=1) as c:
     async with aiohttp.ClientSession(connector=c) as s:
       async with s.get('https://www.google.com/complete/search?client=qsb-android-asbl&q=&gl='+cnl) as response:
-        print(cnl)
         return await response.json()
 
 
